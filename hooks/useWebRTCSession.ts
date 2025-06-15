@@ -5,6 +5,7 @@ import type {
   SessionUpdateEvent,
   ConversationItemCreateEvent
 } from '@/types/realtime';
+import type { Scenario } from '@/lib/scenarios';
 
 interface UseWebRTCSessionProps {
   onTranscript?: (transcript: string, isUser: boolean) => void;
@@ -59,7 +60,7 @@ export function useWebRTCSession({
     sendEvent(sessionUpdate);
   }, [sendEvent]);
 
-  const connect = useCallback(async (scenario: { instructions: string }) => {
+  const connect = useCallback(async (scenario: Scenario) => {
     try {
       // Cleanup existing connection
       disconnect();
@@ -106,6 +107,12 @@ export function useWebRTCSession({
       dataChannel.onopen = () => {
         console.log('Data channel opened');
         setupSessionConfig(scenario.instructions);
+        
+        // AIから会話を開始するため、response.createイベントを送信
+        setTimeout(() => {
+          sendEvent({ type: 'response.create' });
+          console.log('Sent initial response.create to start conversation');
+        }, 500); // セッション設定が完了するまで少し待つ
       };
 
       dataChannel.onmessage = (event) => {
@@ -114,15 +121,27 @@ export function useWebRTCSession({
           console.log('Received event:', data.type);
 
           switch (data.type) {
+            // 正しいイベント名に修正
+            case 'conversation.item.input_audio_transcription.completed':
+              console.log('User transcript:', data.transcript);
+              onTranscript?.(data.transcript, true);
+              break;
+            // 古いイベント名もサポート（互換性のため）
             case 'input_audio_transcription.completed':
+              console.log('User transcript (legacy):', data.transcript);
               onTranscript?.(data.transcript, true);
               break;
             case 'response.audio_transcript.done':
+              console.log('Assistant transcript:', data.transcript);
               onTranscript?.(data.transcript, false);
               break;
             case 'error':
               console.error('Realtime API error:', data.error);
               onError?.(new Error(data.error.message));
+              break;
+            // デバッグ用：session.updatedイベントを確認
+            case 'session.updated':
+              console.log('Session updated:', data.session);
               break;
           }
         } catch (err) {
@@ -206,7 +225,7 @@ export function useWebRTCSession({
       onError?.(error as Error);
       disconnect();
     }
-  }, [setupSessionConfig, onTranscript, onConnectionStateChange, onError]);
+  }, [setupSessionConfig, onTranscript, onConnectionStateChange, onError, sendEvent, disconnect]);
 
   const disconnect = useCallback(() => {
     if (dataChannelRef.current) {

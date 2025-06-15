@@ -47,6 +47,13 @@ export interface ConversationItemCreateEvent {
   };
 }
 
+// 正しいイベント名のインターフェース
+export interface ConversationItemInputAudioTranscriptionEvent {
+  type: 'conversation.item.input_audio_transcription.completed';
+  transcript: string;
+}
+
+// 互換性のため古いイベント名も保持
 export interface InputAudioTranscriptionEvent {
   type: 'input_audio_transcription.completed';
   transcript: string;
@@ -65,13 +72,22 @@ export interface InputAudioBufferClearEvent {
   type: 'input_audio_buffer.clear';
 }
 
+// Session関連のイベント
+export interface SessionUpdatedEvent {
+  type: 'session.updated';
+  session: any;
+}
+
 export type RealtimeEvent = 
   | SessionUpdateEvent
+  | SessionUpdatedEvent
   | ConversationItemCreateEvent
+  | ConversationItemInputAudioTranscriptionEvent
   | InputAudioTranscriptionEvent
   | ResponseAudioTranscriptEvent
   | ResponseCreateEvent
-  | InputAudioBufferClearEvent;
+  | InputAudioBufferClearEvent
+  | RealtimeError;
 
 export interface RealtimeError {
   type: 'error';
