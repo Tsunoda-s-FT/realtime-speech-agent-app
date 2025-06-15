@@ -63,7 +63,21 @@ export function useWebRTCSession({
   const connect = useCallback(async (scenario: Scenario) => {
     try {
       // Cleanup existing connection
-      disconnect();
+      if (dataChannelRef.current) {
+        dataChannelRef.current.close();
+        dataChannelRef.current = null;
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+      }
+      setIsConnected(false);
+      setIsMuted(false);
+      document.querySelectorAll('audio').forEach(el => el.remove());
 
       // Get ephemeral key
       const sessionResponse = await fetch('/api/session', { method: 'POST' });
@@ -223,9 +237,24 @@ export function useWebRTCSession({
     } catch (error) {
       console.error('Connection error:', error);
       onError?.(error as Error);
-      disconnect();
+      // Cleanup on error
+      if (dataChannelRef.current) {
+        dataChannelRef.current.close();
+        dataChannelRef.current = null;
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+      }
+      setIsConnected(false);
+      setIsMuted(false);
+      document.querySelectorAll('audio').forEach(el => el.remove());
     }
-  }, [setupSessionConfig, onTranscript, onConnectionStateChange, onError, sendEvent, disconnect]);
+  }, [setupSessionConfig, onTranscript, onConnectionStateChange, onError, sendEvent]);
 
   const disconnect = useCallback(() => {
     if (dataChannelRef.current) {
