@@ -141,6 +141,13 @@ export function useWebRTCSession({
         const remoteAudio = document.createElement('audio');
         remoteAudio.srcObject = event.streams[0];
         remoteAudio.autoplay = true;
+        
+        // autoplay policyへの対処
+        remoteAudio.play().catch(err => {
+          console.warn('Autoplay failed:', err);
+          // ユーザーインタラクション後に再生を試みる
+        });
+        
         document.body.appendChild(remoteAudio);
       };
 
